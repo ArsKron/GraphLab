@@ -1,0 +1,58 @@
+﻿@page "/AllMinimalPath"
+@using System.Threading
+@using GraphLab.Core
+@using GraphLab.Core.Algorithms
+@using GraphLab.Core.Algorithms.Search
+@using GraphLab.Core.Algorithms.Utils
+@using GraphLab.Blazor.Pages.ComponentConnectionPage
+
+<div id="graph" style="height:70vh"></div>
+
+<button @onclick="FloydUorshellAlgorithm">Алгоритм Флойда-Уоршелла</button>
+
+<div id="graph-matrix">
+    @if (MatrixPainted) {
+        <Component Cities="@ModelService.Graph.Verticies" ReachableMatrix="@Distance" StrongComp="@null"></Component>
+    }
+</div>
+
+@code {
+
+    [Inject]
+    public ModelService ModelService { get; set; }
+
+    [Inject]
+    public IJSRuntime JSRuntime { get; set; }
+
+    public int[,] Distance { get; set; }
+    public int[,] Path { get; set; }
+    public bool MatrixPainted;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            ModelService.Generate(10, true, 1, 20);
+            await JSRuntime.BindGraph(ModelService.Graph, true);
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    protected void FloydUorshellAlgorithm()
+    {
+        FloydUorshellAlgorithm<City, Road> FloydOrshallAlg = new FloydUorshellAlgorithm<City, Road>(ModelService.Graph);
+        Distance = FloydOrshallAlg.Begin();
+        Path = FloydOrshallAlg.Next;
+        MatrixPainted = true;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        MatrixPainted = false;
+        Distance = null;
+        Path = null;
+        await base.OnInitializedAsync();
+    }
+
+}

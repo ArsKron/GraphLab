@@ -1,0 +1,99 @@
+﻿@page "/SearchMinimalPath"
+@using System.Threading
+@using GraphLab.Core
+@using GraphLab.Core.Algorithms
+@using GraphLab.Core.Algorithms.Search
+@using GraphLab.Core.Algorithms.Utils
+@using GraphLab.Core.Algorithms.Search.FindShortestPath
+
+<div id="graph" style="height:70vh"></div>
+
+<button @onclick="StartingDeikstra">Алгоритм Дейкстры</button>
+
+<button @onclick="StartingBellmanFord">Алгоритм Беллмана-Форда</button>
+
+<button @onclick="NextStep" disabled="@(CurrentStep == null || PaintList == true)">Следующий шаг</button>
+
+<div id="graph-matrix">
+    @if (PaintList)
+    {
+        <BellmanFord Cities="@ModelService.Graph.Verticies" list="@LenghtList"></BellmanFord>
+    }
+
+</div>
+
+@code {
+    [Inject]
+    public ModelService ModelService { get; set; }
+
+    [Inject]
+    public IJSRuntime JSRuntime { get; set; }
+
+    public bool PaintList { get; set; }
+
+    public List<List<int>> LenghtList { get; set; }
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+
+            ModelService.Generate(10, true, 1, 20);
+            await JSRuntime.BindGraph(ModelService.Graph, true);
+        }
+        else
+        {
+            foreach (var vertex in ModelService.Graph.Verticies)
+            {
+                await JSRuntime.UpdateVertex(vertex, (SearchAlgorithm?.States != null) ? SearchAlgorithm.States[vertex] : SearchState.None, true);
+            }
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    /// <summary>
+    /// Алгоритм поиска
+    /// </summary>
+    public ISearchAlgorithm<City, Road> SearchAlgorithm { get; private set; }
+
+    /// <summary>
+    /// Текущий шаг алгоритма
+    /// </summary>
+    public AlgorithmStep CurrentStep { get; private set; }
+
+
+    protected void StartingDeikstra()
+    {
+        PaintList = false;
+        SearchAlgorithm = new DeikstraAlgorithm<City, Road>(ModelService.Graph, ModelService.Graph.Verticies.First());
+        CurrentStep = SearchAlgorithm.Begin();
+    }
+
+    protected void StartingBellmanFord()
+    {
+        BellmanFordAlgorithm<City, Road> BellmanFordAlg = new BellmanFordAlgorithm<City, Road>(ModelService.Graph);
+        LenghtList = BellmanFordAlg.Begin();
+        StateHasChanged();
+        PaintList = true;
+    }
+
+    /// <summary>
+    /// Переход к следующему шагу алгоритма
+    /// </summary>
+    protected void NextStep()
+    {
+        CurrentStep = CurrentStep();
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        LenghtList = null;
+        PaintList = false;
+        await base.OnInitializedAsync();
+    }
+
+
+}

@@ -1,0 +1,101 @@
+﻿@page "/MinimalSpanningTrees"
+@using System.Threading
+@using GraphLab.Core
+@using GraphLab.Core.Algorithms
+@using GraphLab.Core.Algorithms.Search
+@using GraphLab.Core.Algorithms.Utils
+@using GraphLab.Core.Algorithms.Search.FindMinPpannTrees
+
+<div id="graph" style="height:90vh"></div>
+
+<button @onclick="StartingPrimAlg">Алгоритм Прима</button>
+
+<button @onclick="StartingKruskalAlg">Алгоритм Крускала</button>
+
+@code {
+
+    [Inject]
+    public ModelService ModelService { get; set; }
+
+    [Inject]
+    public IJSRuntime JSRuntime { get; set; }
+
+    /// <summary>
+    /// Привязка данных графа к визуальному отображению
+    /// </summary>
+    /// <param name="firstRender"></param>
+    /// <returns></returns>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            ModelService.Generate(10, false, 1, 20);
+            await JSRuntime.BindGraph(ModelService.Graph, false);
+        }
+
+        if (PrimAlgorithmStarting)
+        {
+            await JSRuntime.UpdateVertex(ModelService.Graph.Verticies.First(), SearchState.Current, false);
+
+            foreach (var edge in ModelService.Graph.Edges)
+            {
+                await JSRuntime.UpdateEdge(edge, "lightblue", false);
+            }
+
+            foreach (var edge in MinSpanTrees)
+            {
+                await JSRuntime.UpdateEdge(edge, "blue", false);
+            }
+        }
+
+        if (KruskalAlgorithmStarting)
+        {
+            await JSRuntime.UpdateVertex(ModelService.Graph.Verticies.First(), SearchState.Current, false);
+
+            foreach(var edge in ModelService.Graph.Edges)
+            {
+                await JSRuntime.UpdateEdge(edge, "lightblue", false);
+            }
+
+            foreach (var edge in MinSpanTrees)
+            {
+                await JSRuntime.UpdateEdge(edge, "green", false);
+            }
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    public List<Road> MinSpanTrees { get; set; }
+    public bool PrimAlgorithmStarting { get; set; }
+    public bool KruskalAlgorithmStarting { get; set; }
+
+
+
+    protected void StartingPrimAlg()
+    {
+        KruskalAlgorithmStarting = false;
+        PrimAlgorithm<City, Road> prim = new PrimAlgorithm<City, Road>(ModelService.Graph);
+        MinSpanTrees = prim.Begin();
+        PrimAlgorithmStarting = true;
+        StateHasChanged();
+    }
+
+    protected void StartingKruskalAlg()
+    {
+        PrimAlgorithmStarting = false;
+        MinSpanTrees = null;
+        KruskalAlgorithm<City, Road> kruskal = new KruskalAlgorithm<City, Road>(ModelService.Graph);
+        MinSpanTrees = kruskal.Begin();
+        KruskalAlgorithmStarting = true;
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        MinSpanTrees = null;
+        PrimAlgorithmStarting = false;
+        KruskalAlgorithmStarting = false;
+
+        await base.OnInitializedAsync();
+    }
+}
